@@ -1,0 +1,26 @@
+database:
+  postgres:
+    host: "localhost"
+    port: 5432
+    scheme: "public"
+    username: "postgres"
+    password: "postgres"
+    sslMode: "disable"
+    database: "blockchain_monitor"
+    schemaFilePath: "/home/alvaro/blockchainmonitor/setup/schema.sql"
+
+queue:
+  kafka:
+    brokers: "localhost:9092"
+    port: 9092
+    topic: "transaction-event"
+
+blockchainNetwork:
+  blockdaemon:
+    apiKey: ""
+    eth:
+      host: "https://svc.blockdaemon.com/ethereum/mainnet/native"
+    btc:
+      host: "https://svc.blockdaemon.com/bitcoin/mainnet/native"
+    sol:
+      host: "https://svc.blockdaemon.com/solana/mainnet/native"

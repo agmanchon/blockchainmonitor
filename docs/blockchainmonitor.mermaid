@@ -1,0 +1,92 @@
+sequenceDiagram
+    participant Worker
+    participant BlockManager
+    participant BlockPointerDBTable
+    participant BlockDBTable
+    participant BlockDaemon
+    participant BlockThread
+    participant TransactionDBTable
+    participant SyncQueue
+    participant TransactionManager
+    participant TransactionThreadOrphanCollector
+    participant AddressesDBTable
+    participant Kafka
+
+    loop For each configured blockchainNetwork
+        Worker->>+BlockManager: Open one block manager for blockchain network
+        BlockManager->>+BlockPointerDBTable: Get blockpointer for chainId
+        alt Blockpointer Not Found
+            BlockPointerDBTable-->>BlockManager: Not found
+            BlockManager->>+BlockDBTable: Get highest block number processed
+            alt Highest block found
+                BlockDBTable-->>BlockManager: Return highest block number
+            else Response is empty
+                BlockDBTable-->>BlockManager: Empty
+                BlockManager->>+BlockDaemon: Get most recent block number
+                BlockDaemon-->>BlockManager: Return most recent block number
+            end
+        else Blockpointer Found
+            BlockPointerDBTable-->>BlockManager: Return blockpointer with last block processed
+        end
+        loop Open the number of threads configured
+            BlockManager->>+BlockThread: Start it
+            BlockThread->>+BlockPointerDBTable: Get BlockPointer
+            BlockPointerDBTable-->>BlockThread: Eeturn BlockPointer (last block processed)
+            BlockThread->>+BlockDaemon: Get most recent block number
+            alt if last block number proccesed + 1 is higher than most recent block numer
+                BlockThread-->>BlockThread: Contine the loopp
+            else
+                BlockThread->>+BlockDBTable: Create Block with BlockPointer response incremented by 1
+                BlockDBTable-->>BlockThread: Block created with fetched state
+                BlockThread->>+BlockDaemon: Get block
+                BlockDaemon-->>BlockThread: Return block transaction hashes
+                BlockThread-->>+TransactionDBTable: Batch all transactions in database with fetched state
+                TransactionDBTable-->>BlockThread: Transactions created
+                loop for each transaction
+                    BlockThread-->>+SyncQueue: Send each transaction
+                    SyncQueue-->>BlockThread: Transaction sent
+                end
+                BlockThread->>+BlockDBTable: Updated block to processed
+                BlockDBTable-->>BlockThread: Updated ok
+            end
+
+        end
+    end
+    loop For each configured blockchainNetwork
+        Worker->>+TransactionManager: Open one transaction manager for blockchain network
+        TransactionManager->>+TransactionThreadOrphanCollector: Open one collector
+        TransactionThreadOrphanCollector->>+TransactionDBTable: List transactions with fetched state
+        TransactionThreadOrphanCollector->>+TransactionDBTable: and creation date less than current time minus configured value
+        TransactionDBTable-->>TransactionThreadOrphanCollector: Return the transaction collection
+        loop For each transaction
+            TransactionThreadOrphanCollector->>+BlockDaemon: Get Transaction details
+            BlockDaemon-->>TransactionThreadOrphanCollector: Returned transaction details
+            TransactionThreadOrphanCollector->>+AddressesDBTable: Get user addresses
+            AddressesDBTable-->>TransactionThreadOrphanCollector: Return addresses
+            alt If addreses are in Source or Destination transaction details
+                TransactionThreadOrphanCollector->>+Kafka: Send event with datas obtained from transaction details
+            else
+                TransactionThreadOrphanCollector->>+TransactionThreadOrphanCollector: Transaction not sent
+            end
+        end
+        loop Open the number of threads configured
+            TransactionManager->>+TransactionThread: Start it
+            TransactionThread->>+SyncQueue: Waiting for transactions
+            SyncQueue-->>TransactionThread: Transaction Received
+            TransactionThread->>+TransactionDBTable: Get Transaction
+            TransactionDBTable-->>TransactionThread: Return transaction
+            alt if transaction state is fetched
+                TransactionThread->>+BlockDaemon: Get Transaction details
+                BlockDaemon-->>TransactionThread: Returned transaction details
+                TransactionThread->>+AddressesDBTable: Get user addresses
+                AddressesDBTable-->>TransactionThread: Return addresses
+                alt If addreses are in Source or Destination transaction details
+                    TransactionThread->>+Kafka: Send event with datas obtained from transaction details
+                else
+                    TransactionThread->>+TransactionThread: Rransaction not sent
+                end
+            else
+                TransactionThread->>+TransactionThread: Return to the first step and start waiting for transactions
+            end
+        end
+    end

@@ -1,0 +1,38 @@
+Handling Edge Cases in Blockchain Transaction Monitoring System
+1. Retry Mechanisms
+For connection-related errors, such as issues with Blockdaemon, the database, or Kafka, a backoff policy will be used. This policy will attempt to reconnect with increasing intervals to prevent overloading the system and to ensure a stable connection. Specifically:
+
+For Blockdaemon and Kafka, backoff would be used to retry after failure, with a max number of retries defined.
+For database connections, the same approach can be applied, ensuring that the application doesn't overwhelm the DB with repeated requests.
+To avoid data consistency issues during retries, a Resource Version field will be added to the database tables. This field will track the version of each record to ensure that updates are applied correctly. The Resource Version is incremented every time a record is updated, and it helps detect if the record has been modified between retries.
+
+When performing a retry, the system will:
+
+Retrieve the current Resource Version of the record before attempting an update.
+If the version of the record has changed during the retry window (i.e., another process has modified it), the retry will be aborted, and the system can either resolve the conflict or retry with the latest data.
+If the version hasn't changed, the update will proceed normally.
+In the case of using WebSockets with Blockdaemon (which currently only supports Solana), the backoff policy will still apply to handle reconnections. This ensures no data is lost when network connectivity issues arise.
+
+2. Block Reorganization
+For Block Reorganization, I would use A Mark And Replay approach. In the current implementation is not supported. If we want to support we have to mark as error the incorrect block and start processing the first valid block after the incorrec ont
+3. Handling Downtime (1-Hour Scenario)
+In the case of a 1-hour downtime scenario, I ensure no transactions are lost by implementing a robust transaction storage and retrieval mechanism. During downtime, any incoming transactions or blocks will be stored in db, and upon recovery, the system will process the missed transactions starting from the last known block.
+4. Request Rate Limiting
+To prevent overwhelming Blockdaemon with excessive requests, I would introduce a sleep mechanism to space out requests over time. Blockdaemon may return failures if too many requests are made in a short period, so rate limiting with sleep intervals ensures that the application can manage its request frequency without hitting service limits.
+
+5. Scaling with Clustering
+To improve system scalability and fault tolerance, I plan to introduce a cluster-based architecture. This will allow for load balancing across multiple instances of the application, improving throughput and ensuring high availability. The clusters will process transactions in parallel, with each loop checking if a transaction or block is assigned for processing.
+
+6. Factories for Blockchain Integration
+The code will feature two factories:
+
+Blockchain Infrastructure Factory: For setting up connections to services like Blockdaemon.
+Blockchain Network Factory: For managing interactions with different blockchain networks. This modular approach makes it easy to add support for new networks and infrastructure as the system grows.
+7. Redis for Caching and Monitoring
+Instead of repeatedly querying the database, I will introduce Redis as a caching layer. Redis will be used to monitor changes in real-time, with events being published to notify of changes that require cache updates. This reduces load on the database and ensures faster access to frequently used data. Additionally, Redis will be used for system monitoring, allowing real-time visibility into system health and performance.
+
+8. Metrics Collection and Monitoring
+To track performance and health, I will integrate Prometheus for metrics collection and Grafana for visualization. Key metrics could include:
+
+Blockchain Number vs. Last Processed Block: A metric that shows the difference between the most recent block on the blockchain and the last block processed by the application. This helps in identifying any backlog or delays in processing.
+Prometheus will collect these metrics and Grafana will allow for an intuitive visualization of the system's health and performance.
