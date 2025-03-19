@@ -7,7 +7,7 @@ database:
     password: "postgres"
     sslMode: "disable"
     database: "blockchain_monitor"
-    schemaFilePath: "/home/alvaro/blockchainmonitor/setup/schema.sql"
+    schemaFilePath: "{repository-path}/blockchainmonitor/setup/schema.sql"
 
 queue:
   kafka:
@@ -17,7 +17,7 @@ queue:
 
 blockchainNetwork:
   blockdaemon:
-    apiKey: ""
+    apiKey: "{api-key}"
     eth:
       host: "https://svc.blockdaemon.com/ethereum/mainnet/native"
     btc:

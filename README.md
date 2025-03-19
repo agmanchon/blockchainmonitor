@@ -17,7 +17,7 @@ This will execute docker-compose up using a pre-configured docker-compose.yml fi
 
 ### 2.Configure Your Blockdaemon API Key
  
-- In the setup directory, you will find a config file. Add your Blockdaemon API key to this file as shown below:
+- In the setup directory, you will find a config file. Add your Blockdaemon API key and your repository path to this file as shown below:
    ```bash
   database:
   postgres:
@@ -28,24 +28,25 @@ This will execute docker-compose up using a pre-configured docker-compose.yml fi
     password: "postgres"
     sslMode: "disable"
     database: "blockchain_monitor"
-    schemaFilePath: "/home/alvaro/blockchainmonitor/setup/schema.sql"
+    schemaFilePath: "{repository-path}/blockchainmonitor/setup/schema.sql"
 
-    queue:
-    kafka:
-    brokers: "localhost:9092"
-    port: 9092
-    topic: "transaction-event"
-    
-    blockchainNetwork:
-    blockdaemon:
-    apiKey: "your_api_key_here"
-    eth:
-    host: "https://svc.blockdaemon.com/ethereum/mainnet/native"
-    btc:
-    host: "https://svc.blockdaemon.com/bitcoin/mainnet/native"
-    sol:
-    host: "https://svc.blockdaemon.com/solana/mainnet/native"
+  queue:
+  kafka:
+  brokers: "localhost:9092"
+  port: 9092
+  topic: "transaction-event"
   
+  blockchainNetwork:
+  blockdaemon:
+  apiKey: "{api-key}"
+  eth:
+  host: "https://svc.blockdaemon.com/ethereum/mainnet/native"
+  btc:
+  host: "https://svc.blockdaemon.com/bitcoin/mainnet/native"
+  sol:
+  host: "https://svc.blockdaemon.com/solana/mainnet/native"
+
+
 - Replace your_api_key_here with your actual Blockdaemon API key.
 
 ### 3.Run the Application:
