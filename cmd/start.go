@@ -7,7 +7,7 @@ import (
 	"github.com/agmanchon/blockchainmonitor/libs/backend/pkg/kafkaconnection"
 	"github.com/agmanchon/blockchainmonitor/libs/backend/pkg/postgresdb"
 	"github.com/spf13/cobra"
-	"log
+	"log"
 	"os"
 	"os/signal"
 	"sync"
