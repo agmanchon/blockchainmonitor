@@ -54,3 +54,6 @@ This will execute docker-compose up using a pre-configured docker-compose.yml fi
 - After configuring the API key, you can start the application by running the following command:
    ```bash
   make run
+
+### 4. Documentation
+- You can find the Mermaid diagram and documentation on how to handle edge cases in the `docs` directory.
